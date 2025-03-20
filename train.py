@@ -20,7 +20,7 @@ def train_net(net, device, data_path, epochs=40, batch_size=1, lr=0.00001):
     # best_loss统计，初始化为正无穷
     best_loss = float('inf')
     # 训练epochs次
-    with tqdm(total=epochs*per_epoch_num) as pbar:
+    with tqdm(total=epochs * per_epoch_num) as pbar:
         for epoch in range(epochs):
             # 训练模式
             net.train()
@@ -47,13 +47,13 @@ def train_net(net, device, data_path, epochs=40, batch_size=1, lr=0.00001):
 
 if __name__ == "__main__":
     # 选择设备，有cuda用cuda，没有就用cpu
-    #device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     device = torch.device('cpu')
     # 加载网络，图片单通道1，分类为1。
     net = UNet(n_channels=1, n_classes=1)  # todo edit input_channels n_classes
     # 将网络拷贝到deivce中
     net.to(device=device)
     # 指定训练集地址，开始训练
-    data_path = "D:/oldD/computer/finalproject/unet_42-master/lumbar" # todo 修改为你本地的数据集位置
+    data_path = "D:/lumbar/lumbar"  # todo 修改为你本地的数据集位置
     print("进度条出现卡着不动不是程序问题，是他正在计算，请耐心等待")
     train_net(net, device, data_path, epochs=40, batch_size=1)

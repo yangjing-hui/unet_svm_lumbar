@@ -18,8 +18,8 @@ import cv2
 from model.unet_model import UNet
 
 
-def cal_miou(test_dir="D:/oldD/computer/finalproject/unet_42-master/lumbar/Test_Images",
-             pred_dir="D:/oldD/computer/finalproject/unet_42-master/lumbar/results", gt_dir="D:/oldD/computer/finalproject/unet_42-master/lumbar/Test_Labels"):
+def cal_miou(test_dir="D:/lumbar/lumbar/Test_Images",
+             pred_dir="D:/lumbar/lumbar/results", gt_dir="D:/lumbar/lumbar/Test_Labels"):
     # ---------------------------------------------------------------------------#
     #   miou_mode用于指定该文件运行时计算的内容
     #   miou_mode为0代表整个miou计算流程，包括获得预测结果、计算miou。
