@@ -2,7 +2,6 @@ import os
 import numpy as np
 from feature_extraction_svm1 import extract_features
 
-
 def load_train_data(data_dir):
     X = []
     y = []
@@ -22,11 +21,9 @@ def load_train_data(data_dir):
 
     return np.array(X), np.array(y)
 
-
 def load_prediction_data(binary_mask_path, original_image_path):
     features = extract_features(binary_mask_path, original_image_path)
     return np.array([features])
-
 
 def load_test_data(data_dir):
     X = []

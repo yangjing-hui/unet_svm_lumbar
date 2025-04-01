@@ -3,14 +3,12 @@ import numpy as np
 from skimage.measure import moments, moments_central, moments_normalized, moments_hu
 from skimage.filters import gabor
 
-def extract_features(binary_mask_path, original_image_path):
-    binary_mask = cv2.imread(binary_mask_path, 0)
-    original_image = cv2.imread(original_image_path, 0)
 
+def extract_features(single_binary_mask, original_image):
     features = []
 
     # 1. 基本强度特征
-    contours, _ = cv2.findContours(binary_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(single_binary_mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if len(contours) == 0:
         return np.zeros(3269)
     cnt = max(contours, key=cv2.contourArea)
@@ -40,7 +38,6 @@ def extract_features(binary_mask_path, original_image_path):
     features.extend(hist)
 
     # 2. 不变矩
-    # 将 x 和 y 组合成一个元组作为 center 参数
     center = (y, x)  # 注意这里 y 在前，x 在后，因为 skimage 中是 (row, col) 顺序
     m = moments_hu(moments_normalized(moments_central(original_image, center=center)))
     features.extend(m)

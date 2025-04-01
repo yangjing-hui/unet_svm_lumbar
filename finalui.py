@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel,
                              QPushButton, QFileDialog, QMessageBox, QHBoxLayout, QVBoxLayout)
 import torch
 from model.unet_model import UNet
-from feature_extraction_svm1 import extract_features
+from feature_extraction import extract_features
 
 # 设备配置
 device = torch.device('cpu')
