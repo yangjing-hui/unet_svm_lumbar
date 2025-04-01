@@ -5,7 +5,7 @@ import joblib
 from data_loader_svm2 import load_train_data, load_test_data
 
 # 加载训练数据
-train_data_dir = 'svmdata/train'
+train_data_dir = '../svmdata/train'
 X_train, y_train = load_train_data(train_data_dir)
 
 # 划分训练集和验证集
@@ -32,10 +32,10 @@ print(f"验证集 Recall: {recall_val}")
 print(f"验证集 F1-score: {f1_val}")
 
 # 保存训练好的模型
-joblib.dump(svm_model, 'trained_svm_model.pkl')
+joblib.dump(svm_model, '../trained_svm_model.pkl')
 
 # 加载测试数据
-test_data_dir = 'svmdata/test'
+test_data_dir = '../svmdata/test'
 X_test, y_test = load_test_data(test_data_dir)
 
 # 在测试集上进行预测

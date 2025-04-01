@@ -5,10 +5,10 @@ from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout
 import joblib
 from tqdm import tqdm
-from feature_extraction_svm1 import extract_features
+from feature_extraction import extract_features
 
 def main():
-    model_path = 'trained_svm_model.pkl'
+    model_path = '../trained_svm_model.pkl'
     if not os.path.exists(model_path):
         print(f"模型文件 {model_path} 不存在，请先运行模型训练脚本。")
         return
@@ -16,8 +16,8 @@ def main():
     try:
         loaded_model = joblib.load(model_path)
 
-        new_binary_mask_path = 'images/tmp/single_result.jpg'
-        new_original_image_path = 'images/tmp/upload_show_result.jpg'
+        new_binary_mask_path = '../images/tmp/single_result.jpg'
+        new_original_image_path = '../images/tmp/upload_show_result.jpg'
 
         if not (os.path.exists(new_binary_mask_path) and os.path.exists(new_original_image_path)):
             print("图像文件路径错误或文件不存在。")
@@ -61,7 +61,7 @@ def main():
             cv2.putText(original_color, label, (text_x, text_y),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
-        cv2.imwrite("annotated_result.jpg", original_color)
+        cv2.imwrite("../annotated_result.jpg", original_color)
 
         # 显示图像
         app = QApplication([])
@@ -69,7 +69,7 @@ def main():
         window.setWindowTitle("标注结果")
         layout = QVBoxLayout()
         label = QLabel()
-        pixmap = QPixmap("annotated_result.jpg")
+        pixmap = QPixmap("../annotated_result.jpg")
         label.setPixmap(pixmap)
         layout.addWidget(label)
         window.setLayout(layout)

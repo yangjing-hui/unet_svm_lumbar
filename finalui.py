@@ -5,20 +5,19 @@
 import os
 import cv2
 import numpy as np
-import shutil
 import sys  # 必须导入sys
 import joblib
 from PyQt5.QtGui import QPixmap, QIcon
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel,
-                             QPushButton, QFileDialog, QMessageBox, QHBoxLayout, QVBoxLayout)
+                             QPushButton, QFileDialog, QMessageBox, QHBoxLayout,
+                             QVBoxLayout, QProgressBar)
 import torch
 from model.unet_model import UNet
-from feature_extraction import extract_features
+from svm_extraction.feature_extraction import extract_features
 
 # 设备配置
 device = torch.device('cpu')
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -85,6 +84,13 @@ class MainWindow(QMainWindow):
         btn_layout.addWidget(self.predict_btn)
         btn_widget.setLayout(btn_layout)
 
+        # 进度条
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setFormat("%p%")  # 显示百分比
+        self.progress_bar.setVisible(False)
+        main_layout.addWidget(self.progress_bar)
+
         # 状态提示
         self.status_label = QLabel("等待操作...", alignment=Qt.AlignCenter)
         self.status_label.setStyleSheet("color: #666; font-size: 14px;")
@@ -95,6 +101,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(img_widget)
         main_layout.addWidget(btn_widget)
         main_layout.addWidget(self.status_label)
+        main_layout.addWidget(self.progress_bar)  # 将进度条添加到主布局的最后
         self.setCentralWidget(central_widget)
 
     def upload_image(self):
@@ -145,7 +152,6 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "错误", f"分割失败：{str(e)}")
 
     def predict_degeneration(self):
-        """执行退变预测"""
         if not self.svm_model:
             QMessageBox.warning(self, "警告", "请先训练SVM模型")
             return
@@ -167,10 +173,17 @@ class MainWindow(QMainWindow):
 
             # 过滤小轮廓
             valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 100]
+            total = len(valid_contours)
+            self.progress_bar.setMaximum(total)
+            self.progress_bar.setValue(0)
+            self.progress_bar.setVisible(True)
 
             # 标注结果
             annotated = original.copy()
-            for cnt in valid_contours:
+            prediction_counts = {'degenerative': 0, 'normal': 0}
+            predictions = []  # 存储预测结果
+
+            for i, cnt in enumerate(valid_contours):
                 single_mask = np.zeros_like(mask, dtype=np.uint8)
                 cv2.drawContours(single_mask, [cnt], -1, 255, -1)
 
@@ -180,21 +193,37 @@ class MainWindow(QMainWindow):
 
                 # 预测
                 prediction = self.svm_model.predict([features])
-                color = (0, 0, 255) if prediction[0] == 1 else (0, 255, 0)
+                predictions.append(prediction[0])  # 保存预测结果
 
-                # 绘制标注
+                # 更新计数
+                if prediction[0] == 1:
+                    prediction_counts['degenerative'] += 1
+                else:
+                    prediction_counts['normal'] += 1
+
+                # 更新进度条
+                self.progress_bar.setValue(i + 1)
+                QApplication.processEvents()  # 处理界面更新
+
+            # 统一标注
+            for i, cnt in enumerate(valid_contours):
+                prediction = predictions[i]
+                color = (0, 0, 255) if prediction == 1 else (0, 255, 0)
                 x, y, w, h = cv2.boundingRect(cnt)
                 cv2.rectangle(annotated, (x, y), (x + w, y + h), color, 2)
-                cv2.putText(annotated, "Degenerative" if prediction[0] == 1 else "Normal",
+                cv2.putText(annotated, "Degenerative" if prediction == 1 else "Normal",
                             (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
             # 保存并显示结果
             result_path = os.path.join(self.tmp_dir, "annotated.jpg")
             cv2.imwrite(result_path, annotated)
             self.show_result_image("annotated.jpg")
-            self.status_label.setText(f"分析完成，发现{len(valid_contours)}个椎间盘（{sum(prediction)}个退变）")
+            self.status_label.setText(
+                f"分析完成，发现{total}个椎间盘（退变：{prediction_counts['degenerative']}，正常：{prediction_counts['normal']}）")
+            self.progress_bar.setVisible(False)
 
         except Exception as e:
+            self.progress_bar.setVisible(False)
             QMessageBox.critical(self, "错误", f"预测失败：{str(e)}")
 
     def show_result_image(self, filename):
