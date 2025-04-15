@@ -157,8 +157,24 @@ class MainWindow(QMainWindow):
             return
 
         try:
+            # 加载标准化器
+            try:
+                scaler = joblib.load('scaler.pkl')
+            except FileNotFoundError:
+                QMessageBox.warning(self, "警告", "未找到标准化器文件 scaler.pkl，请先训练模型并保存标准化器。")
+                return
+
             self.status_label.setText("正在分析...")
-            mask = cv2.imread(os.path.join(self.tmp_dir, "mask.jpg"), 0)
+            # 检查文件是否存在
+            mask_path = os.path.join(self.tmp_dir, "mask.jpg")
+            if not os.path.exists(mask_path):
+                QMessageBox.warning(self, "警告", f"未找到二值图文件: {mask_path}")
+                return
+            if not os.path.exists(self.img_path):
+                QMessageBox.warning(self, "警告", f"未找到原图文件: {self.img_path}")
+                return
+
+            mask = cv2.imread(mask_path, 0)
             original = cv2.imread(self.img_path)
 
             # 形态学处理
@@ -172,7 +188,7 @@ class MainWindow(QMainWindow):
                                            cv2.CHAIN_APPROX_SIMPLE)
 
             # 过滤小轮廓
-            valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 100]
+            valid_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > 300]
             total = len(valid_contours)
             self.progress_bar.setMaximum(total)
             self.progress_bar.setValue(0)
@@ -189,7 +205,13 @@ class MainWindow(QMainWindow):
 
                 # 特征提取（确保灰度图）
                 original_gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
-                features = extract_features(single_mask, original_gray)
+                try:
+                    features = extract_features(single_mask, original_gray)
+                    # 对特征进行标准化
+                    features = scaler.transform([features])[0]
+                except Exception as e:
+                    QMessageBox.warning(self, "警告", f"特征提取或标准化失败: {str(e)}")
+                    continue
 
                 # 预测
                 prediction = self.svm_model.predict([features])

@@ -1,6 +1,11 @@
+# 借助 StandardScaler 对数据进行标准化处理。
+# 利用 GridSearchCV 开展网格搜索，从而找出最优的超参数组合。
+# 对测试数据也进行了标准化处理
+
 from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.preprocessing import StandardScaler
 import joblib
 from data_loader_svm2 import load_train_data, load_test_data
 
@@ -8,17 +13,35 @@ from data_loader_svm2 import load_train_data, load_test_data
 train_data_dir = '../svmdata/train'
 X_train, y_train = load_train_data(train_data_dir)
 
+# 数据标准化
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+
+# 保存标准化模型
+joblib.dump(scaler, '../scaler.pkl')
+
 # 划分训练集和验证集
 X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
 
-# 创建 SVM 模型
-svm_model = SVC(kernel='rbf', C=0.259, gamma=0.0227)
+# 定义超参数网格
+param_grid = {
+    'C': [0.1, 1, 10],
+    'gamma': [0.001, 0.01, 0.1],
+    'kernel': ['rbf', 'linear']
+}
 
-# 训练模型
-svm_model.fit(X_train, y_train)
+# 创建 SVM 模型
+svm_model = SVC()
+
+# 使用网格搜索寻找最优超参数
+grid_search = GridSearchCV(svm_model, param_grid, cv=5)
+grid_search.fit(X_train, y_train)
+
+# 获取最优模型
+best_svm_model = grid_search.best_estimator_
 
 # 在验证集上进行预测
-y_pred_val = svm_model.predict(X_val)
+y_pred_val = best_svm_model.predict(X_val)
 
 # 计算验证集评估指标
 accuracy_val = accuracy_score(y_val, y_pred_val)
@@ -32,14 +55,20 @@ print(f"验证集 Recall: {recall_val}")
 print(f"验证集 F1-score: {f1_val}")
 
 # 保存训练好的模型
-joblib.dump(svm_model, '../trained_svm_model.pkl')
+joblib.dump(best_svm_model, '../trained_svm_model.pkl')
 
 # 加载测试数据
 test_data_dir = '../svmdata/test'
 X_test, y_test = load_test_data(test_data_dir)
 
+# 加载标准化模型
+scaler = joblib.load('../scaler.pkl')
+
+# 对测试数据进行标准化
+X_test = scaler.transform(X_test)
+
 # 在测试集上进行预测
-y_pred_test = svm_model.predict(X_test)
+y_pred_test = best_svm_model.predict(X_test)
 
 # 计算测试集评估指标
 accuracy_test = accuracy_score(y_test, y_pred_test)
