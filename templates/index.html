@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>椎间盘退变分析系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+       .header {
+            background-color: #007BFF;
+            color: white;
+            padding: 1rem 0;
+            text-align: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+       .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1rem;
+            justify-content: center;
+            flex: 1;
+        }
+
+       .operation-section {
+            flex: 1 1 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+       .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+       .button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+       .button:hover {
+            transform: scale(1.05);
+        }
+
+       .upload-button {
+            background-color: #007BFF;
+        }
+
+       .segment-button {
+            background-color: #28a745;
+        }
+
+       .predict-button {
+            background-color: #ffc107;
+        }
+
+       .status-container {
+            text-align: center;
+            color: #6c757d;
+        }
+
+       .progress-container {
+            background-color: #e9ecef;
+            border-radius: 0.25rem;
+            overflow: hidden;
+        }
+
+       .progress-bar {
+            background-color: #007BFF;
+            height: 1rem;
+            text-align: center;
+            color: white;
+            transition: width 0.6s ease;
+        }
+
+       .image-result-section {
+            flex: 1 1 920px;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+       .image-row {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: nowrap;
+        }
+
+       .image-container,
+       .chart-container {
+            background-color: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            width: 380px;
+            height: 420px;
+            position: relative;
+        }
+
+       .image-container h2,
+       .chart-container h2 {
+            position: absolute;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            margin: 0;
+            z-index: 1;
+        }
+
+       .image-container img,
+       .chart-container canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 0.375rem;
+            margin-top: 2rem;
+        }
+
+       .table-container {
+            background-color: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 0.5rem;
+            border-bottom: 1px solid #dee2e6;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f9fa;
+        }
+
+       .reminder {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            text-align: center;
+            position: sticky;
+            bottom: 0;
+            z-index: 100;
+        }
+
+       .disc-element {
+            position: absolute;
+            width: 50px;
+            opacity: 0.2;
+            z-index: -1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1 class="text-3xl font-bold">椎间盘退变分析系统</h1>
+    </div>
+    <div class="main-content">
+        <div class="operation-section">
+            <div class="button-container">
+                <input type="file" id="upload-file" accept="image/*" class="border border-gray-300 rounded-md p-2">
+                <button class="button upload-button" id="upload-btn">上传影像</button>
+                <button class="button segment-button" id="segment-btn" disabled>分割椎间盘</button>
+                <button class="button predict-button" id="predict-btn" disabled>退变分析</button>
+            </div>
+            <div class="status-container">
+                <p id="status">等待操作...</p>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0"
+                    aria-valuemax="100"></div>
+            </div>
+        </div>
+        <div class="image-result-section">
+            <div class="image-row">
+                <div class="image-container">
+                    <h2 class="text-xl font-semibold">原始图像</h2>
+                    <img id="original-image" src="#" alt="原始图像" style="display: none;">
+                </div>
+                <div class="image-container">
+                    <h2 class="text-xl font-semibold">处理结果</h2>
+                    <img id="result-image" src="#" alt="处理结果" style="display: none;">
+                </div>
+                <div class="chart-container">
+                    <h2 class="text-xl font-semibold">分析结果统计图</h2>
+                    <canvas id="result-chart"></canvas>
+                </div>
+            </div>
+            <div class="table-container">
+                <h2 class="text-xl font-semibold">分析结果统计</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>类别</th>
+                            <th>数量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="result-table">
+                        <tr>
+                            <td>退变椎间盘</td>
+                            <td>0</td>
+                        </tr>
+                        <tr>
+                            <td>正常椎间盘</td>
+                            <td>0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="reminder">
+        <p>提醒：本分析结果仅供参考，具体诊断请咨询专业医生。</p>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#upload-btn').click(function () {
+                var file = $('#upload-file')[0].files[0];
+                if (file) {
+                    var formData = new FormData();
+                    formData.append('image', file);
+                    $.ajax({
+                        url: '/upload',
+                        type: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        beforeSend: function () {
+                            $('#status').text('正在上传...');
+                            $('.progress-bar').css('width', '0%').attr('aria-valuenow', 0);
+                        },
+                        xhr: function () {
+                            var xhr = new window.XMLHttpRequest();
+                            xhr.upload.addEventListener('progress', function (e) {
+                                if (e.lengthComputable) {
+                                    var percentComplete = (e.loaded / e.total) * 100;
+                                    $('.progress-bar').css('width', percentComplete + '%').attr('aria-valuenow', percentComplete);
+                                }
+                            }, false);
+                            return xhr;
+                        },
+                        success: function (response) {
+                            if (response.status ==='success') {
+                                $('#original-image').attr('src', '/' + response.img_path).show();
+                                $('#status').text('图像已上传，点击分割');
+                                $('#segment-btn').prop('disabled', false);
+                                $('#predict-btn').prop('disabled', true);
+                            } else {
+                                $('#status').text('上传失败：' + response.message);
+                            }
+                        },
+                        error: function (error) {
+                            $('#status').text('上传发生错误：' + error.responseText);
+                        }
+                    });
+                } else {
+                    $('#status').text('请选择一个图像文件');
+                }
+            });
+
+            $('#segment-btn').click(function () {
+                var imgPath = $('#original-image').attr('src');
+                if (imgPath!== '#') {
+                    $.ajax({
+                        url: '/segment',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ img_path: imgPath.slice(1) }),
+                        beforeSend: function () {
+                            $('#status').text('正在分割...');
+                            $('.progress-bar').css('width', '0%').attr('aria-valuenow', 0);
+                        },
+                        xhr: function () {
+                            var xhr = new window.XMLHttpRequest();
+                            xhr.upload.addEventListener('progress', function (e) {
+                                if (e.lengthComputable) {
+                                    var percentComplete = (e.loaded / e.total) * 100;
+                                    $('.progress-bar').css('width', percentComplete + '%').attr('aria-valuenow', percentComplete);
+                                }
+                            }, false);
+                            return xhr;
+                        },
+                        success: function (response) {
+                            if (response.status ==='success') {
+                                $('#result-image').attr('src', '/' + response.mask_path).show();
+                                $('#status').text('分割完成，点击退变分析');
+                                $('#predict-btn').prop('disabled', false);
+                            } else {
+                                $('#status').text('分割失败：' + response.message);
+                            }
+                        },
+                        error: function (error) {
+                            $('#status').text('分割发生错误：' + error.responseText);
+                        }
+                    });
+                }
+            });
+
+            $('#predict-btn').click(function () {
+                var imgPath = $('#original-image').attr('src');
+                var maskPath = $('#result-image').attr('src');
+                if (imgPath!== '#' && maskPath!== '#') {
+                    $.ajax({
+                        url: '/predict',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ img_path: imgPath.slice(1), mask_path: maskPath.slice(1) }),
+                        beforeSend: function () {
+                            $('#status').text('正在分析...');
+                            $('.progress-bar').css('width', '0%').attr('aria-valuenow', 0);
+                        },
+                        xhr: function () {
+                            var xhr = new window.XMLHttpRequest();
+                            xhr.upload.addEventListener('progress', function (e) {
+                                if (e.lengthComputable) {
+                                    var percentComplete = (e.loaded / e.total) * 100;
+                                    $('.progress-bar').css('width', percentComplete + '%').attr('aria-valuenow', percentComplete);
+                                }
+                            }, false);
+                            return xhr;
+                        },
+                        success: function (response) {
+                            if (response.status ==='success') {
+                                $('#result-image').attr('src', '/' + response.result_path);
+                                $('#status').text(response.message);
+                                // 更新表格数据
+                                var degenerativeCount = response.degenerative_count || 0;
+                                var normalCount = response.normal_count || 0;
+                                $('#result-table tr:nth-child(1) td:nth-child(2)').text(degenerativeCount);
+                                $('#result-table tr:nth-child(2) td:nth-child(2)').text(normalCount);
+
+                                // 更新统计图
+                                var ctx = document.getElementById('result-chart').getContext('2d');
+                                if (window.myChart) {
+                                    window.myChart.destroy();
+                                }
+                                window.myChart = new Chart(ctx, {
+                                    type: 'pie',
+                                    data: {
+                                        labels: ['退变椎间盘', '正常椎间盘'],
+                                        datasets: [{
+                                            label: '椎间盘数量',
+                                            data: [degenerativeCount, normalCount],
+                                            backgroundColor: [
+                                                'rgba(255, 99, 132, 0.2)',
+                                                'rgba(54, 162, 235, 0.2)'
+                                            ],
+                                            borderColor: [
+                                                'rgba(255, 99, 132, 1)',
+                                                'rgba(54, 162, 235, 1)'
+                                            ],
+                                            borderWidth: 1
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        maintainAspectRatio: false
+                                    }
+                                });
+                            } else {
+                                $('#status').text('预测失败：' + response.message);
+                            }
+                        },
+                        error: function (error) {
+                            $('#status').text('预测发生错误：' + error.responseText);
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
